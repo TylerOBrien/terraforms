@@ -1,3 +1,9 @@
+/*
+|--------------------------------------------------------------------------
+| Terraform
+|--------------------------------------------------------------------------
+*/
+
 terraform {
   required_providers {
     aws = {
@@ -8,6 +14,12 @@ terraform {
 
   required_version = ">= 0.14.9"
 }
+
+/*
+|--------------------------------------------------------------------------
+| Variables
+|--------------------------------------------------------------------------
+*/
 
 variable "availability_zones" {
   description = "A list of availability zones in which to create subnets"
@@ -21,10 +33,22 @@ variable "cidr_block" {
   default     = "10.0.0.0/16"
 }
 
+/*
+|--------------------------------------------------------------------------
+| Provider
+|--------------------------------------------------------------------------
+*/
+
 provider "aws" {
   profile = "default"
   region  = "us-east-2"
 }
+
+/*
+|--------------------------------------------------------------------------
+| VPC
+|--------------------------------------------------------------------------
+*/
 
 resource "aws_vpc" "my_vpc" {
   cidr_block           = var.cidr_block
@@ -35,6 +59,12 @@ resource "aws_vpc" "my_vpc" {
     Name = "dev-vpc"
   }
 }
+
+/*
+|--------------------------------------------------------------------------
+| Subnets
+|--------------------------------------------------------------------------
+*/
 
 resource "aws_subnet" "my_subnet" {
   count      = length(var.availability_zones)
@@ -49,6 +79,12 @@ resource "aws_subnet" "my_subnet" {
   }
 }
 
+/*
+|--------------------------------------------------------------------------
+| Internet Gateway
+|--------------------------------------------------------------------------
+*/
+
 resource "aws_internet_gateway" "my_igw" {
   vpc_id = aws_vpc.my_vpc.id
 
@@ -56,6 +92,12 @@ resource "aws_internet_gateway" "my_igw" {
     Name = "dev-igw"
   }
 }
+
+/*
+|--------------------------------------------------------------------------
+| Route Table
+|--------------------------------------------------------------------------
+*/
 
 resource "aws_route_table" "my_rtb" {
   vpc_id = aws_vpc.my_vpc.id
@@ -75,6 +117,12 @@ resource "aws_route_table_association" "my_rtb_assoc" {
   subnet_id      = aws_subnet.my_subnet[count.index].id
   route_table_id = aws_route_table.my_rtb.id
 }
+
+/*
+|--------------------------------------------------------------------------
+| Bastion
+|--------------------------------------------------------------------------
+*/
 
 resource "aws_security_group" "sg_bastion" {
   name        = "dev-bastion-sg"
@@ -99,6 +147,25 @@ resource "aws_security_group" "sg_bastion" {
     Name = "dev-bastion-sg"
   }
 }
+
+resource "aws_instance" "ec2_bastion" {
+  subnet_id     = aws_subnet.my_subnet[0].id
+  ami           = "ami-00399ec92321828f5" # Ubuntu 20.04
+  instance_type = "t2.micro"
+
+  vpc_security_group_ids = [aws_security_group.sg_bastion.id]
+  depends_on             = [aws_internet_gateway.my_igw]
+
+  tags = {
+    Name = "dev-bastion"
+  }
+}
+
+/*
+|--------------------------------------------------------------------------
+| API
+|--------------------------------------------------------------------------
+*/
 
 resource "aws_security_group" "sg_api" {
   name        = "dev-sg-api"
@@ -145,6 +212,25 @@ resource "aws_security_group" "sg_api" {
   }
 }
 
+resource "aws_instance" "ec2_api" {
+  subnet_id     = aws_subnet.my_subnet[1].id
+  ami           = "ami-00399ec92321828f5" # Ubuntu 20.04
+  instance_type = "t2.micro"
+
+  vpc_security_group_ids = [aws_security_group.sg_api.id]
+  depends_on             = [aws_internet_gateway.my_igw]
+
+  tags = {
+    Name = "dev-api"
+  }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Database
+|--------------------------------------------------------------------------
+*/
+
 resource "aws_security_group" "sg_mariadb" {
   name        = "dev-sg-mariadb"
   description = "asdf"
@@ -166,32 +252,6 @@ resource "aws_security_group" "sg_mariadb" {
 
   tags = {
     Name = "dev-sg-mariadb"
-  }
-}
-
-resource "aws_instance" "ec2_bastion" {
-  subnet_id     = aws_subnet.my_subnet[0].id
-  ami           = "ami-00399ec92321828f5" # Ubuntu 20.04
-  instance_type = "t2.micro"
-
-  vpc_security_group_ids = [aws_security_group.sg_bastion.id]
-  depends_on             = [aws_internet_gateway.my_igw]
-
-  tags = {
-    Name = "dev-bastion"
-  }
-}
-
-resource "aws_instance" "ec2_api" {
-  subnet_id     = aws_subnet.my_subnet[1].id
-  ami           = "ami-00399ec92321828f5" # Ubuntu 20.04
-  instance_type = "t2.micro"
-
-  vpc_security_group_ids = [aws_security_group.sg_api.id]
-  depends_on             = [aws_internet_gateway.my_igw]
-
-  tags = {
-    Name = "dev-api"
   }
 }
 
