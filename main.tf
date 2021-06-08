@@ -30,16 +30,19 @@ resource "aws_vpc" "my_vpc" {
   cidr_block           = var.cidr_block
   enable_dns_hostnames = true
 
+
   tags = {
     Name = "dev-vpc"
   }
 }
 
 resource "aws_subnet" "my_subnet" {
-  count             = length(var.availability_zones)
-  availability_zone = var.availability_zones[count.index]
-  vpc_id            = aws_vpc.my_vpc.id
-  cidr_block        = cidrsubnet(aws_vpc.my_vpc.cidr_block, 4, count.index)
+  count      = length(var.availability_zones)
+  vpc_id     = aws_vpc.my_vpc.id
+  cidr_block = cidrsubnet(aws_vpc.my_vpc.cidr_block, 4, count.index)
+
+  availability_zone       = var.availability_zones[count.index]
+  map_public_ip_on_launch = true
 
   tags = {
     Name = "dev-subnet"
