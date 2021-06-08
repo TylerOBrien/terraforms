@@ -240,7 +240,21 @@ resource "aws_security_group" "sg_mariadb" {
     from_port       = 3306
     to_port         = 3306
     protocol        = "tcp"
+    security_groups = [aws_security_group.sg_bastion.id]
+  }
+
+  ingress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
     security_groups = [aws_security_group.sg_api.id]
+  }
+
+  egress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.sg_bastion.id]
   }
 
   egress {
