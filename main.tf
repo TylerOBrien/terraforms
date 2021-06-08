@@ -143,6 +143,13 @@ resource "aws_security_group" "sg_bastion" {
     cidr_blocks = [aws_vpc.my_vpc.cidr_block]
   }
 
+  egress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.my_vpc.cidr_block]
+  }
+
   tags = {
     Name = "dev-bastion-sg"
   }
